@@ -1,16 +1,18 @@
 <?php
-// Import PHPMailer classes
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
+use Dotenv\Dotenv;
 
-// Load Composer's autoloader
 require 'vendor/autoload.php';
+
+
+$dotenv = Dotenv::createImmutable(__DIR__);
+$dotenv->load();
 
 header('Content-Type: application/json');
 
-// Enable error reporting for debugging (remove in production)
 error_reporting(E_ALL);
-ini_set('display_errors', 0); // Don't display errors to user
+ini_set('display_errors', 0); 
 ini_set('log_errors', 1);
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -18,7 +20,6 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-// Get and validate form data
 $name = isset($_POST['name']) ? trim($_POST['name']) : '';
 $email = isset($_POST['email']) ? trim($_POST['email']) : '';
 $subject = isset($_POST['subject']) ? trim($_POST['subject']) : '';
@@ -34,36 +35,26 @@ if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
     exit;
 }
 
-// Create PHPMailer instance
 $mail = new PHPMailer(true);
 
 try {
-    // Server settings
     $mail->isSMTP();
-    $mail->Host       = 'smtp.gmail.com';
+    $mail->Host       = $_ENV['SMTP_HOST'];
     $mail->SMTPAuth   = true;
-    $mail->Username   = 'mromel0624@gmail.com';           // Your Gmail
-    $mail->Password   = 'sjou tnno ksna rrwn';            // Your App Password
+    $mail->Username   = $_ENV['SMTP_USERNAME'];
+    $mail->Password   = $_ENV['SMTP_PASSWORD']; 
     $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-    $mail->Port       = 587;
-    
-    // Optional: Enable debug output (comment out in production)
-    // $mail->SMTPDebug = 2;
-    // $mail->Debugoutput = function($str, $level) {
-    //     error_log("SMTP Debug level $level; message: $str");
-    // };
+    $mail->Port       = $_ENV['SMTP_PORT'];
 
-    // Recipients
-    // IMPORTANT: Gmail requires the "From" address to be your authenticated email
-    $mail->setFrom('mromel0624@gmail.com', 'Portfolio Website');
-    $mail->addAddress('mromel0624@gmail.com', 'Romel Maraño');  // Where you receive emails
-    $mail->addReplyTo($email, $name);  // This allows you to reply directly to the sender
+
+    $mail->setFrom($_ENV['SMTP_USERNAME'], 'Portfolio Website');
+    $mail->addAddress($_ENV['SMTP_USERNAME'], 'Romel Maraño');
+    $mail->addReplyTo($email, $name);
 
     // Content
     $mail->isHTML(true);
     $mail->Subject = "Portfolio Contact: " . $subject;
     
-    // HTML email body
     $mail->Body = "
         <html>
         <body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333;'>
@@ -89,7 +80,6 @@ try {
         </html>
     ";
     
-    // Plain text version for email clients that don't support HTML
     $mail->AltBody = "New Contact Form Submission\n\n" .
                      "From: {$name}\n" .
                      "Email: {$email}\n" .
@@ -98,7 +88,6 @@ try {
                      "---\n" .
                      "This email was sent from your portfolio contact form.";
 
-    // Send email
     $mail->send();
     
     echo json_encode([
@@ -107,13 +96,12 @@ try {
     ]);
     
 } catch (Exception $e) {
-    // Log the actual error for debugging
     error_log("PHPMailer Error: " . $mail->ErrorInfo);
     
     // Return user-friendly error message
     echo json_encode([
         'success' => false, 
-        'message' => 'Failed to send message. Please try again later or email me directly at mromel0624@gmail.com'
+        'message' => 'Failed to send message. Please try again later or email me directly.'
     ]);
 }
 ?>
